@@ -10,12 +10,6 @@ class User_Tags {
     public function __construct() {
         add_action('init', [$this, 'register_user_tags_taxonomy']);
 
-        add_action('show_user_profile', [$this, 'user_tags_meta_box']);
-        add_action('edit_user_profile', [$this, 'user_tags_meta_box']);
-
-        add_action('personal_options_update', [$this, 'save_user_tags']);
-        add_action('edit_user_profile_update', [$this, 'save_user_tags']);
-
         add_action('admin_menu', [$this, 'add_user_taxonomy_admin_page']);
 
         add_filter('parent_file', [$this, 'filter_user_taxonomy_admin_page_parent_file']);
@@ -51,34 +45,6 @@ class User_Tags {
             'rewrite'           => ['slug' => 'user-tags'],
             'update_count_callback' => [$this, 'user_taxonomy_update_count_callback'],
         ]);
-    }
-
-    /**
-     * Displays a multi-select dropdown for user tags on the user profile page.
-     */
-    public function user_tags_meta_box($user) {
-        $user_tags = wp_get_object_terms($user->ID, 'user_tags', ['fields' => 'ids']);
-        $terms = get_terms(['taxonomy' => 'user_tags', 'hide_empty' => false]);
-
-        echo '<h3>' . __('User Tags', 'utp') . '</h3>';
-        echo '<select name="user_tags[]" multiple style="width:100%;">';
-        foreach ($terms as $term) {
-            $selected = in_array($term->term_id, $user_tags) ? 'selected' : '';
-            echo '<option value="' . esc_attr($term->term_id) . '" ' . $selected . '>' . esc_html($term->name) . '</option>';
-        }
-        echo '</select>';
-    }
-
-    /**
-     * Saves the selected user tags when the user profile is updated.
-     */
-    public function save_user_tags($user_id) {
-        if (!current_user_can('edit_user', $user_id)) {
-            return false;
-        }
-
-        $tags = isset($_POST['user_tags']) ? array_map('intval', $_POST['user_tags']) : [];
-        wp_set_object_terms($user_id, $tags, 'user_tags', false);
     }
 
     /**
