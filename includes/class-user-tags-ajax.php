@@ -46,23 +46,38 @@ class User_Tags_AJAX {
      * Handles AJAX search for user tags.
      */
     public function search_user_tags() {
-
-        check_ajax_referer('search_user_tags_nonce', 'nonce');
+        
+        if (!isset($_GET['nonce']) || !wp_verify_nonce($_GET['nonce'], 'search_user_tags_nonce')) {
+            wp_send_json_error(['message' => 'Invalid nonce.'], 403);
+        }
+    
         $search = isset($_GET['q']) ? sanitize_text_field($_GET['q']) : '';
-
+        if (empty($search)) {
+            wp_send_json_error(['message' => 'Search query cannot be empty.'], 400);
+        }
+    
         $terms = get_terms([
             'taxonomy'   => 'user_tags',
             'hide_empty' => false,
-            'search'     => $search
         ]);
-
-        if (is_wp_error($terms) || empty($terms)) {
-            wp_send_json([]);
+    
+        if (is_wp_error($terms)) {
+            wp_send_json_error(['message' => 'Error fetching terms: ' . $terms->get_error_message()], 500);
         }
-        $results = array_map(function ($term) {
-            return ['id' => $term->term_id, 'text' => esc_html($term->name)];
-        }, $terms);
 
-        wp_send_json($results);
+        $filtered_terms = array_filter($terms, function ($term) use ($search) {
+            return stripos($term->name, $search) !== false;
+        });
+    
+        if (empty($filtered_terms)) {
+            wp_send_json_success(['message' => 'No matching tags found.', 'results' => []]);
+        }
+    
+        $results = array_values(array_map(function ($term) {
+            return ['id' => $term->term_id, 'text' => esc_html($term->name)];
+        }, $filtered_terms));
+    
+        wp_send_json_success(['results' => $results]);
     }
+    
 }

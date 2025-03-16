@@ -5,10 +5,11 @@ jQuery(document).ready(function ($) {
             dataType: 'json',
             delay: 250,
             data: function (params) {
-                return { action: 'search_user_tags', q: params.term };
+                return { action: 'search_user_tags', q: params.term, nonce:utp_ajax.nonce };
             },
             processResults: function (data) {
-                return { results: data };
+               // console.log('Select2 Response:', data); // Debug response in console
+                return { results: data.data.results || [] };
             },
             cache: true
         },
