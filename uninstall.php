@@ -4,21 +4,29 @@ if (!defined('WP_UNINSTALL_PLUGIN')) {
     exit;
 }
 
-// Delete user tags taxonomy terms
-$terms = get_terms([
-    'taxonomy'   => 'user_tags',
-    'hide_empty' => false
-]);
+// Include WordPress functions if necessary
+require_once ABSPATH . 'wp-load.php';
+require_once ABSPATH . 'wp-includes/taxonomy.php';
 
-if (!is_wp_error($terms) && !empty($terms)) {
-    foreach ($terms as $term) {
-        wp_delete_term($term->term_id, 'user_tags');
+// Ensure the taxonomy exists before proceeding
+if (taxonomy_exists('user_tags')) {
+    // Delete all terms under 'user_tags' taxonomy
+    $terms = get_terms([
+        'taxonomy'   => 'user_tags',
+        'hide_empty' => false
+    ]);
+
+    if (!is_wp_error($terms) && !empty($terms)) {
+        foreach ($terms as $term) {
+            wp_delete_term($term->term_id, 'user_tags');
+        }
     }
 }
 
-// Remove any plugin-specific options from wp_options table
-delete_option('user_tags_plugin_settings'); 
-
-// Clear any saved user meta related to user tags (if applicable)
+// Clean up user meta related to user tags
 global $wpdb;
-$wpdb->delete($wpdb->usermeta, ['meta_key' => 'user_tags']); 
+$wpdb->query("DELETE FROM {$wpdb->usermeta} WHERE meta_key = 'user_tags'");
+
+// Remove taxonomy itself
+$wpdb->query("DELETE FROM {$wpdb->term_taxonomy} WHERE taxonomy = 'user_tags'");
+$wpdb->query("DELETE t FROM {$wpdb->terms} t LEFT JOIN {$wpdb->term_taxonomy} tt ON t.term_id = tt.term_id WHERE tt.taxonomy IS NULL");
